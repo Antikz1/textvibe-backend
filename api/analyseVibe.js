@@ -1,10 +1,15 @@
 export default async function handler(request, response) {
-  // Only allow POST requests
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { conversationText } = request.body;
+
+  // This check is very important
+  if (!conversationText) {
+    return response.status(400).json({ error: 'No conversation text provided.' });
+  }
+//... the rest of the code
 
   // Abort if no text is provided
   if (!conversationText) {
