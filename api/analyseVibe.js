@@ -4,21 +4,11 @@ export default async function handler(request, response) {
   }
 
   const { conversationText } = request.body;
-
-  // This check is very important
-  if (!conversationText) {
-    return response.status(400).json({ error: 'No conversation text provided.' });
-  }
-//... the rest of the code
-
-  // Abort if no text is provided
   if (!conversationText) {
     return response.status(400).json({ error: 'No conversation text provided.' });
   }
 
-  // Securely get the API key from environment variables
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
   const openAIPrompt = `You are an AI dating coach. Analyze the following dating conversation for a user aged 16-30. Provide a JSON response with the following keys: 'toneLabel', 'confidenceScore' (1-10), 'interestScore' (1-10), 'keyInsight', 'rephrasedResponse', and 'emojiSummary'. The keyInsight should be a short, catchy tagline. The rephrasedResponse should be a suggested reply. Conversation: "${conversationText}"`;
 
   try {
@@ -36,18 +26,28 @@ export default async function handler(request, response) {
     });
 
     if (!openAIResponse.ok) {
-      throw new Error(`OpenAI API error: ${openAIResponse.statusText}`);
+      // This handles errors from OpenAI itself (like a bad key)
+      const errorData = await openAIResponse.json();
+      console.error("OpenAI API Error:", errorData);
+      return response.status(openAIResponse.status).json({ error: "OpenAI API returned an error." });
     }
-    
+
     const data = await openAIResponse.json();
-    // The actual analysis is nested inside the response content, which is a JSON string.
-    const analysisContent = JSON.parse(data.choices[0].message.content);
+    const contentString = data.choices[0].message.content;
 
-    // Send the clean analysis back to your app
-    response.status(200).json(analysisContent);
+    // ✅ NEW: Add a try/catch block specifically for parsing the JSON
+    try {
+      const analysisContent = JSON.parse(contentString);
+      return response.status(200).json(analysisContent);
+    } catch (parseError) {
+      // If parsing fails, log the problematic string and return an error
+      console.error("Failed to parse JSON response from OpenAI.");
+      console.error("Problematic content:", contentString); // This log is crucial for debugging
+      return response.status(500).json({ error: "Failed to parse AI response." });
+    }
 
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ error: 'Failed to fetch analysis from OpenAI.' });
+  } catch (networkError) {
+    console.error("Network error calling OpenAI:", networkError);
+    return response.status(500).json({ error: 'Failed to fetch analysis due to a network error.' });
   }
 }
