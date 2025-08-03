@@ -19,14 +19,13 @@ export default async function handler(request, response) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "gpt-4o", // ✅ UPDATED: Changed from "gpt-4" to a compatible model
         messages: [{ role: "system", content: openAIPrompt }],
         response_format: { type: "json_object" },
       }),
     });
 
     if (!openAIResponse.ok) {
-      // This handles errors from OpenAI itself (like a bad key)
       const errorData = await openAIResponse.json();
       console.error("OpenAI API Error:", errorData);
       return response.status(openAIResponse.status).json({ error: "OpenAI API returned an error." });
@@ -35,14 +34,12 @@ export default async function handler(request, response) {
     const data = await openAIResponse.json();
     const contentString = data.choices[0].message.content;
 
-    // ✅ NEW: Add a try/catch block specifically for parsing the JSON
     try {
       const analysisContent = JSON.parse(contentString);
       return response.status(200).json(analysisContent);
     } catch (parseError) {
-      // If parsing fails, log the problematic string and return an error
       console.error("Failed to parse JSON response from OpenAI.");
-      console.error("Problematic content:", contentString); // This log is crucial for debugging
+      console.error("Problematic content:", contentString);
       return response.status(500).json({ error: "Failed to parse AI response." });
     }
 
