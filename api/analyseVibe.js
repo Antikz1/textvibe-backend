@@ -3,7 +3,6 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // ✅ Receive the new 'persona' from the app
   const { conversationText, goal, persona } = request.body;
 
   if (!conversationText || !goal || !persona) {
@@ -12,7 +11,6 @@ export default async function handler(request, response) {
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-  // ✅ Define the instructions for each persona
   let personaInstructions = "";
   if (persona === "The Wingman") {
       personaInstructions = "Your tone is like a fun, modern wingman. You're encouraging, use some light slang (like 'low-key', 'vibe', 'rizz'), and keep it confident and fun. Your goal is to hype the user up.";
@@ -20,25 +18,36 @@ export default async function handler(request, response) {
       personaInstructions = "Your tone is like an expert strategist. You are insightful, direct, and logical. Focus on the psychological dynamics of the conversation and provide clear, actionable advice.";
   }
 
-  // ✅ The prompt now includes the dynamic persona instructions
+  // ✅ The prompt is now even more strict to prevent missing keys.
   const openAIPrompt = `
 You are "VibeCheck," a dating and communication coach. You must adopt the following persona for your response.
 
 **Your Persona:** ${personaInstructions}
-
 **User's Goal:** "${goal}"
 
 **Your Task:**
 Analyze the conversation with the user's goal AND your persona in mind. All of your analysis and suggestions must be tailored to help them achieve this specific goal while maintaining your persona.
 
-**Analysis Steps:**
-1.  **Initial Assessment:** Determine the overall tone.
-2.  **Score Calculation:** Provide a 'confidenceScore' and an 'interestScore'.
-3.  **Vibe Breakdown:** Write a paragraph explaining the conversation's dynamic.
-4.  **Strategic Replies:** Generate an array of 2-3 distinct suggested replies. Each reply must be a strategic move towards the user's goal. Each reply object must have 'title', 'text', and 'reason' keys.
-
 **Output Format:**
-Respond ONLY with a single, minified JSON object.
+Respond ONLY with a single, minified JSON object. Do not include any text, markdown, or explanations before or after the JSON. The JSON structure MUST be exactly as follows:
+{
+  "toneLabel": "A short label for the tone",
+  "confidenceScore": 10,
+  "interestScore": 10,
+  "vibeBreakdown": "Your detailed analysis paragraph here.",
+  "suggestedReplies": [
+    {
+      "title": "Strategy Title 1",
+      "text": "The first suggested reply.",
+      "reason": "The reason this reply is effective."
+    },
+    {
+      "title": "Strategy Title 2",
+      "text": "The second suggested reply.",
+      "reason": "The reason this reply is effective."
+    }
+  ]
+}
 
 **Conversation to Analyze:**
 "${conversationText}"
