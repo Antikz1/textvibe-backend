@@ -3,33 +3,42 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // ✅ Receive both the text and the new goal from the app
-  const { conversationText, goal } = request.body;
+  // ✅ Receive the new 'persona' from the app
+  const { conversationText, goal, persona } = request.body;
 
-  if (!conversationText || !goal) {
-    return response.status(400).json({ error: 'Missing conversation text or goal.' });
+  if (!conversationText || !goal || !persona) {
+    return response.status(400).json({ error: 'Missing conversation text, goal, or persona.' });
   }
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-  // ✅ The prompt is now dynamic and includes the user's specific goal
+  // ✅ Define the instructions for each persona
+  let personaInstructions = "";
+  if (persona === "The Wingman") {
+      personaInstructions = "Your tone is like a fun, modern wingman. You're encouraging, use some light slang (like 'low-key', 'vibe', 'rizz'), and keep it confident and fun. Your goal is to hype the user up.";
+  } else { // Default to The Strategist
+      personaInstructions = "Your tone is like an expert strategist. You are insightful, direct, and logical. Focus on the psychological dynamics of the conversation and provide clear, actionable advice.";
+  }
+
+  // ✅ The prompt now includes the dynamic persona instructions
   const openAIPrompt = `
-You are "VibeCheck," an expert dating and communication coach. Your tone is insightful, modern, and empowering.
-A user has provided a conversation and their specific goal.
+You are "VibeCheck," a dating and communication coach. You must adopt the following persona for your response.
+
+**Your Persona:** ${personaInstructions}
 
 **User's Goal:** "${goal}"
 
 **Your Task:**
-Analyze the conversation with the user's goal in mind. All of your analysis and suggestions must be tailored to help them achieve this specific goal.
+Analyze the conversation with the user's goal AND your persona in mind. All of your analysis and suggestions must be tailored to help them achieve this specific goal while maintaining your persona.
 
 **Analysis Steps:**
-1.  **Initial Assessment:** Read the conversation and determine the overall tone.
-2.  **Score Calculation:** Provide a 'confidenceScore' and an 'interestScore' from the other person's perspective (scale of 1-10).
-3.  **Vibe Breakdown:** Write a paragraph (2-3 sentences) explaining the dynamic of the conversation in the context of the user's goal.
-4.  **Strategic Replies:** Generate an array of 2-3 distinct suggested replies. Each reply must be a strategic move towards achieving the user's goal. Each reply object must have three keys: 'title', 'text', and 'reason'.
+1.  **Initial Assessment:** Determine the overall tone.
+2.  **Score Calculation:** Provide a 'confidenceScore' and an 'interestScore'.
+3.  **Vibe Breakdown:** Write a paragraph explaining the conversation's dynamic.
+4.  **Strategic Replies:** Generate an array of 2-3 distinct suggested replies. Each reply must be a strategic move towards the user's goal. Each reply object must have 'title', 'text', and 'reason' keys.
 
 **Output Format:**
-Respond ONLY with a single, minified JSON object. Do not include any text before or after the JSON. The JSON must have these exact keys: 'toneLabel', 'confidenceScore', 'interestScore', 'vibeBreakdown', and 'suggestedReplies'.
+Respond ONLY with a single, minified JSON object.
 
 **Conversation to Analyze:**
 "${conversationText}"
