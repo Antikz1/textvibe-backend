@@ -18,7 +18,6 @@ export default async function handler(request, response) {
       personaInstructions = "Your tone is like an expert strategist. You are insightful, direct, and logical. Focus on the psychological dynamics of the conversation and provide clear, actionable advice.";
   }
 
-  // ✅ The prompt is now even more strict to prevent missing keys.
   const openAIPrompt = `
 You are "VibeCheck," a dating and communication coach. You must adopt the following persona for your response.
 
@@ -27,6 +26,13 @@ You are "VibeCheck," a dating and communication coach. You must adopt the follow
 
 **Your Task:**
 Analyze the conversation with the user's goal AND your persona in mind. All of your analysis and suggestions must be tailored to help them achieve this specific goal while maintaining your persona.
+
+**Input Conversation Format:**
+The user will provide a conversation with speakers labeled as "Me:" (the app user) and "Them:" (the other person). Your analysis MUST be from the perspective of "Me".
+
+**Example Input:**
+Me: Hey!
+Them: Hi, how are you?
 
 **Output Format:**
 Respond ONLY with a single, minified JSON object. Do not include any text, markdown, or explanations before or after the JSON. The JSON structure MUST be exactly as follows:
