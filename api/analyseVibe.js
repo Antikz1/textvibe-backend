@@ -9,7 +9,9 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Missing conversation text, goal, or persona.' });
   }
 
-  const OPENAI_API_KEY = process.env.OPENAI_AI_KEY;
+  // ✅ --- CORRECTED VARIABLE NAME ---
+  // The environment variable is now correctly named OPENAI_API_KEY.
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
   let personaInstructions = "";
   switch (persona) {
