@@ -9,7 +9,7 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Missing conversation text, goal, or persona.' });
   }
 
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  const OPENAI_API_KEY = process.env.OPENAI_AI_KEY;
 
   let personaInstructions = "";
   switch (persona) {
@@ -28,29 +28,44 @@ export default async function handler(request, response) {
   }
 
   const openAIPrompt = `
-You are "VibeCheck," a dating and communication coach. You must adopt the following persona for your response.
+You are "VibeGPT," a world-renowned communication strategist specializing in the subconscious signals of digital attraction.
 
 **Your Persona:** ${personaInstructions}
 **User's Goal:** "${goal}"
-
-**Language and Region:**
-IMPORTANT: All of your responses, including analysis and suggested replies, must use British English spelling, grammar, and colloquialisms.
+**Language and Region:** British English.
 
 **Your Task:**
-Analyze the conversation with the user's goal AND your persona in mind. All of your analysis and suggestions must be tailored to help them achieve this specific goal while maintaining your persona and language style.
+Perform a deep, multi-layered analysis of the conversation from the perspective of "Me". Your analysis must be framed through established psychological principles.
 
 **Output Format:**
-Respond ONLY with a single, minified JSON object. The JSON structure MUST be exactly as follows:
+Respond ONLY with a single, minified JSON object. The structure MUST be exactly as follows, and you MUST provide EXACTLY 3 suggested replies, each representing a different level of risk.
 {
   "toneLabel": "A short label for the tone",
   "confidenceScore": 10,
   "interestScore": 10,
-  "vibeBreakdown": "Your detailed analysis paragraph here.",
+  "powerDynamic": "A brief assessment (e.g., 'You're Pursuing', 'They're Pursuing', 'Balanced').",
+  "strategicAnalysis": "A detailed paragraph explaining the subtext, key moments, and overall strategy to achieve the user's goal.",
   "suggestedReplies": [
-    {
-      "title": "Strategy Title 1",
-      "text": "The first suggested reply.",
-      "reason": "The reason this reply is effective."
+    { 
+      "title": "Low Risk: The Safe Play", 
+      "text": "The first suggested reply.", 
+      "reason": "Explain the psychological tactic here (e.g., 'This uses playful misinterpretation to build comfort.').",
+      "riskLevel": "Low",
+      "potentialOutcome": "A short prediction of their likely positive response."
+    },
+    { 
+      "title": "Medium Risk: The Bold Move", 
+      "text": "The second suggested reply.", 
+      "reason": "Explain the psychological tactic here (e.g., 'This creates scarcity by implying you have other options.').",
+      "riskLevel": "Medium",
+      "potentialOutcome": "A short prediction of their likely positive response."
+    },
+    { 
+      "title": "High Risk: The Game Changer", 
+      "text": "The third suggested reply.", 
+      "reason": "Explain the psychological tactic here (e.g., 'This is a direct challenge that forces a clear show of interest.').",
+      "riskLevel": "High",
+      "potentialOutcome": "A short prediction of their likely positive response."
     }
   ]
 }
