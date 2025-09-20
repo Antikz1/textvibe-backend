@@ -1,5 +1,7 @@
 // Use CommonJS export syntax for Vercel compatibility
 module.exports = async (request, response) => {
+  console.log("🚀 [1/5] Function invoked.");
+
   // --- Security & Input Validation ---
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method Not Allowed' });
@@ -53,6 +55,7 @@ module.exports = async (request, response) => {
     `;
 
   try {
+    console.log("📡 [2/5] Sending request to OpenAI...");
     const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: 'POST',
       headers: {
@@ -67,9 +70,11 @@ module.exports = async (request, response) => {
       }),
     });
 
+    console.log("✅ [3/5] Received response from OpenAI.");
+
     if (!openAIResponse.ok) {
       const errorData = await openAIResponse.json();
-      console.error("OpenAI API Error:", errorData);
+      console.error("❌ OpenAI API Error:", errorData);
       return response.status(openAIResponse.status).json({ error: "OpenAI API returned an error." });
     }
     
@@ -77,16 +82,18 @@ module.exports = async (request, response) => {
     const contentString = data.choices[0].message.content;
 
     try {
+      console.log("🔄 [4/5] Parsing JSON response...");
       const analysisContent = JSON.parse(contentString);
+      console.log("✅ [5/5] Successfully parsed. Sending response to app.");
       return response.status(200).json(analysisContent);
     } catch (parseError) {
-      console.error("Failed to parse JSON response from OpenAI.");
+      console.error("❌ Failed to parse JSON response from OpenAI.");
       console.error("Problematic content:", contentString);
       return response.status(500).json({ error: "Failed to parse AI response." });
     }
 
   } catch (networkError) {
-    console.error("Network error calling OpenAI:", networkError);
+    console.error("❌ Network error calling OpenAI:", networkError);
     return response.status(500).json({ error: 'Failed to fetch analysis due to a network error.' });
   }
 };
