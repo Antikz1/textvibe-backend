@@ -17,17 +17,17 @@ export default async function handler(request, response) {
   // --- AI Prompt Engineering ---
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-  let personaInstructions = "Your persona is the 'Strategist'. Your tone is insightful, modern, and empowering. You analyze the conversation through a psychological lens and provide direct, logical advice.";
+  let personaInstructions = "Your persona is the 'Direct'. Your tone is insightful, modern, and empowering. You analyze the conversation through a psychological lens and provide direct, logical advice.";
   
   if (persona === "Wingman 🔥") {
       personaInstructions = "Your persona is the 'Wingman'. Your tone is fun, encouraging, and playful. You're here to hype the user up and give them charismatic, confident lines.";
-  } else if (persona === "Joker 😂") { // ✅ UPDATED
+  } else if (persona === "Joker 😂") {
       personaInstructions = "Your persona is the 'Joker'. Your tone is witty and humorous. Your goal is to provide funny, clever, and unexpected replies that are designed to make the other person laugh.";
   } else if (persona === "Rebel 😈") {
       personaInstructions = "Your persona is the 'Rebel'. Your tone is brutally honest, edgy, and high-risk. You provide unfiltered, bold advice that cuts straight to the point. IMPORTANT: Always include a 'Consequence' key in your reply objects, explaining the potential negative outcome of such a bold move.";
   }
 
-  const openAIPrompt = `
+  const openAIProm-pt = `
     You are "VibeCheck," an expert dating and communication coach using British English.
     
     **Persona:**
@@ -62,6 +62,7 @@ export default async function handler(request, response) {
         model: "gpt-4o-mini",
         messages: [{ role: "system", content: openAIPrompt }],
         response_format: { type: "json_object" },
+        max_tokens: 400 // ✅ COST CONTROL: Hard limit on response length
       }),
     });
 
