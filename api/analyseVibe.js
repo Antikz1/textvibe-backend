@@ -7,7 +7,7 @@ module.exports = async (request, response) => {
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { conversationText, goal, persona } = request.body;
+  const { conversationText, goal, persona, isSubscribed } = request.body; // New isSubscribed flag
 
   if (!conversationText) {
     return response.status(400).json({ error: 'No conversation text provided.' });
@@ -16,6 +16,10 @@ module.exports = async (request, response) => {
   if (conversationText.length > 2000) {
     return response.status(413).json({ error: 'Conversation text exceeds the 2000 character limit.' });
   }
+
+  // ✅ NEW: Select model based on subscription status
+  const modelForTier = isSubscribed ? "gpt-4o" : "gpt-4o-mini";
+  console.log(`🧠 Using model: ${modelForTier} (Subscribed: ${isSubscribed})`);
 
   // --- AI Prompt Engineering ---
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -63,10 +67,10 @@ module.exports = async (request, response) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: modelForTier, // Use the selected model
         messages: [{ role: "system", content: openAIPrompt }],
         response_format: { type: "json_object" },
-        max_tokens: 400
+        max_tokens: isSubscribed ? 800 : 400 // Allow longer responses for paid users
       }),
     });
 
