@@ -1,4 +1,5 @@
-export default async function handler(request, response) {
+// Use CommonJS export syntax for Vercel compatibility
+module.exports = async (request, response) => {
   // --- Security & Input Validation ---
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method Not Allowed' });
@@ -27,7 +28,7 @@ export default async function handler(request, response) {
       personaInstructions = "Your persona is the 'Rebel'. Your tone is brutally honest, edgy, and high-risk. You provide unfiltered, bold advice that cuts straight to the point. IMPORTANT: Always include a 'Consequence' key in your reply objects, explaining the potential negative outcome of such a bold move.";
   }
 
-  const openAIProm-pt = `
+  const openAIPrompt = `
     You are "VibeCheck," an expert dating and communication coach using British English.
     
     **Persona:**
@@ -62,7 +63,7 @@ export default async function handler(request, response) {
         model: "gpt-4o-mini",
         messages: [{ role: "system", content: openAIPrompt }],
         response_format: { type: "json_object" },
-        max_tokens: 400 // ✅ COST CONTROL: Hard limit on response length
+        max_tokens: 400
       }),
     });
 
@@ -88,5 +89,5 @@ export default async function handler(request, response) {
     console.error("Network error calling OpenAI:", networkError);
     return response.status(500).json({ error: 'Failed to fetch analysis due to a network error.' });
   }
-}
+};
 
