@@ -1,8 +1,9 @@
 import { Redis } from '@upstash/redis'
 import crypto from "crypto";
 
-// --- CONFIGURATION ---
-const PROMPT_VERSION = "1.2"; // Updated version
+// --- CONFIGURATION & VERSIONING ---
+// Incrementing this will invalidate all old cache entries, ensuring users get the new, extraordinary results.
+const PROMPT_VERSION = "2.0-legendary";
 const DAILY_BUDGET_GBP = 50.00;
 const COST_PER_1K_TOKENS_GBP = 0.0006;
 
@@ -11,45 +12,52 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-// ✅ --- DYNAMIC PROMPT GENERATION ---
-// This function builds the unique, game-changing prompt based on user selections.
+// --- DYNAMIC PROMPT GENERATION (THE "SECRET SAUCE") ---
 const generatePrompt = (conversation, goal, persona) => {
     let personaInstruction = "";
     switch (persona) {
         case "Direct 🤔":
-            personaInstruction = "Your tone is The Strategist: direct, logical, insightful, and confident. Use clear, strategic language and focus on the most effective path to the user's goal.";
+            personaInstruction = "Your tone is The Strategist: direct, logical, and insightful. Your advice is framed around achieving the user's goal with maximum efficiency and clarity. You are confident and analytical.";
             break;
         case "Wingman 🔥":
-            personaInstruction = "Your tone is The Wingman: fun, encouraging, high-energy, and playful. Use modern slang, be supportive, and inject a bit of humour. Your goal is to hype the user up.";
+            personaInstruction = "Your tone is The Wingman: fun, encouraging, and high-energy. Use modern slang and be relentlessly supportive. Your goal is to boost the user's confidence and make the interaction fun.";
             break;
         case "Joker 😂":
-            personaInstruction = "Your tone is The Comedian: witty, sarcastic, and clever. Find the humour in the situation and provide genuinely funny replies that are still effective.";
+            personaInstruction = "Your tone is The Comedian: witty, clever, and sarcastic. You find the humour in the situation and create replies that are genuinely funny while still being strategically sound.";
             break;
         case "Rebel 😈":
-            personaInstruction = "Your tone is The Rebel: brutally honest, direct, and unfiltered. Use strong language where appropriate. You MUST include a 'consequence' field in your reply objects, warning the user of the potential negative outcome of this high-risk approach.";
+            personaInstruction = "Your tone is The Rebel: brutally honest and unfiltered, challenging conventional dating advice. You are not just being rude; you are providing high-risk, high-reward strategies that break patterns. You MUST include a 'consequence' field in your reply objects, warning of the potential negative outcome.";
             break;
         default:
             personaInstruction = "Your tone is that of a helpful, neutral dating coach.";
     }
 
+    // This is the legendary prompt. It instructs the AI to perform a multi-layered, strategic analysis.
     return `
-You are "VibeCheck," an expert dating and communication coach. Your analysis must be insightful, modern, and empowering, using British English spelling and colloquialisms.
+You are "VibeCheck," a world-class communication strategist and dating coach. Your analysis is legendary, providing users with an almost unfair advantage. You must use British English spelling and colloquialisms.
 
 **Persona Directive:** ${personaInstruction}
 
-**User's Goal:** The user's primary goal for this conversation is to: "${goal}". All of your analysis and suggestions must be aimed at achieving this specific goal.
+**User's Goal:** The user's primary objective is to: "${goal}". Your entire analysis and all suggestions must be laser-focused on achieving this goal.
 
-**Conversation Analysis Steps:**
-1.  **Strategic Analysis:** Write a short paragraph (2-4 sentences) explaining the dynamic of the conversation. Incorporate psychological principles (e.g., scarcity, social proof, playful challenge) to explain what's happening.
-2.  **Power Dynamic:** State who currently has the upper hand in the conversation (e.g., "User is pursuing", "They are pursuing", "Balanced").
+**Extraordinary Analysis Protocol (5 Steps):**
+1.  **Strategic Analysis & Vibe Radar:** Provide a deep, insightful paragraph explaining the conversation's dynamic. Go beyond the obvious. Analyze the subtext, emoji usage, question-to-statement ratio, and implied response times. Frame your analysis using psychological principles like 'Push/Pull', 'Scarcity', or 'Demonstrated High Value'.
+2.  **Power Dynamic:** Explicitly state who holds the power in the conversation (e.g., "User is pursuing", "They are pursuing", "Balanced").
 3.  **Scoring:** Provide a 'confidenceScore' and an 'interestScore' from the other person's perspective (scale of 1-10).
-4.  **Strategic Replies:** Generate an array of exactly THREE distinct suggested replies. Each reply object in the array must have these keys: 'title' (a catchy name for the strategy), 'text' (the suggested reply message), 'reason' (why this approach is effective for the user's goal), 'riskLevel' (Low, Medium, or High), and 'potentialOutcome' (a likely positive result). If your persona is "The Rebel", you must also include a 'consequence' key.
+4.  **Strategic Replies:** Generate an array of **exactly THREE** distinct suggested replies. Each reply object must be a complete strategic package with the following keys:
+    * **'title':** A catchy name for the strategy (e.g., "The Playful Challenge").
+    * **'text':** The suggested reply message.
+    * **'mindset':** The crucial psychological mindset the user should adopt when sending the message (e.g., "Confident & Unattached," "Playfully Curious"). This is critical.
+    * **'reason':** A brief explanation of *why* this strategy is effective for the user's goal.
+    * **'riskLevel':** The potential risk of this reply (Low, Medium, or High).
+    * **'potentialOutcome':** The likely positive result if the strategy works.
+    * **'consequence':** (Only for The Rebel persona) A warning of the potential negative outcome.
 
-**Output Format:**
-Respond ONLY with a single, minified JSON object. Do not include any text before or after the JSON. The structure must be:
-{"strategicAnalysis": "", "powerDynamic": "", "confidenceScore": 0, "interestScore": 0, "suggestedReplies": [{"title":"", "text":"", "reason":"", "riskLevel":"", "potentialOutcome":""}]}
+**CRITICAL Output Format:**
+You must respond ONLY with a single, minified JSON object. Do not include any introductory text, markdown, or explanations. The JSON structure must exactly match this example:
+{"strategicAnalysis":"","powerDynamic":"","confidenceScore":0,"interestScore":0,"suggestedReplies":[{"title":"","text":"","mindset":"","reason":"","riskLevel":"","potentialOutcome":""}]}
 
-**Conversation to Analyze (note speaker labels 'Me:' and 'Them:'):**
+**Conversation to Analyze (Pay close attention to 'Me:' and 'Them:' labels):**
 "${conversation}"
 `;
 };
@@ -85,9 +93,9 @@ module.exports = async (request, response) => {
             return response.status(429).json({ error: "High demand. Please try again later or upgrade." });
         }
 
-        // ✅ NEW: Generate the full prompt dynamically
         const openAIPrompt = generatePrompt(conversationText, goal, persona);
         const modelToUse = isSubscribed ? "gpt-4o" : "gpt-4o-mini";
+        const maxTokens = isSubscribed ? 800 : 400; // Give premium users a more detailed response
 
         const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
             method: 'POST',
@@ -99,7 +107,7 @@ module.exports = async (request, response) => {
                 model: modelToUse,
                 messages: [{ role: "system", content: openAIPrompt }],
                 response_format: { type: "json_object" },
-                max_tokens: 600, // Increased token limit for more detailed analysis
+                max_tokens: maxTokens,
             }),
         });
         
@@ -115,7 +123,6 @@ module.exports = async (request, response) => {
         const callCost = (tokensUsed / 1000) * COST_PER_1K_TOKENS_GBP;
         const currentTotal = await redis.incrbyfloat(budgetKey, callCost);
         
-        // Set expiry for budget key to 24 hours to auto-clean
         if (currentTotal === callCost) {
             await redis.expire(budgetKey, 86400);
         }
