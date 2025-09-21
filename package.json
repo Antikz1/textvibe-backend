@@ -1,0 +1,9 @@
+{
+  "name": "textvibe-backend",
+  "version": "1.0.0",
+  "description": "Secure backend for the TextVibe app.",
+  "main": "api/analyzeVibe.js",
+  "dependencies": {
+    "@upstash/redis": "^1.22.0"
+  }
+}
