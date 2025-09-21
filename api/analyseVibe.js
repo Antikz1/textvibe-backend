@@ -2,7 +2,6 @@ import { Redis } from '@upstash/redis'
 import crypto from "crypto";
 
 // --- CONFIGURATION & VERSIONING ---
-// Incrementing this will invalidate all old cache entries, ensuring users get the new, extraordinary results.
 const PROMPT_VERSION = "2.0-legendary";
 const DAILY_BUDGET_GBP = 50.00;
 const COST_PER_1K_TOKENS_GBP = 0.0006;
@@ -32,7 +31,6 @@ const generatePrompt = (conversation, goal, persona) => {
             personaInstruction = "Your tone is that of a helpful, neutral dating coach.";
     }
 
-    // This is the legendary prompt. It instructs the AI to perform a multi-layered, strategic analysis.
     return `
 You are "VibeCheck," a world-class communication strategist and dating coach. Your analysis is legendary, providing users with an almost unfair advantage. You must use British English spelling and colloquialisms.
 
@@ -54,7 +52,7 @@ You are "VibeCheck," a world-class communication strategist and dating coach. Yo
     * **'consequence':** (Only for The Rebel persona) A warning of the potential negative outcome.
 
 **CRITICAL Output Format:**
-You must respond ONLY with a single, minified JSON object. Do not include any introductory text, markdown, or explanations. The JSON structure must exactly match this example:
+You must respond ONLY with a single, minified JSON object. Do not include any introductory text, markdown, or explanations. Do not truncate your response. The JSON structure must exactly match this example:
 {"strategicAnalysis":"","powerDynamic":"","confidenceScore":0,"interestScore":0,"suggestedReplies":[{"title":"","text":"","mindset":"","reason":"","riskLevel":"","potentialOutcome":""}]}
 
 **Conversation to Analyze (Pay close attention to 'Me:' and 'Them:' labels):**
@@ -95,7 +93,8 @@ module.exports = async (request, response) => {
 
         const openAIPrompt = generatePrompt(conversationText, goal, persona);
         const modelToUse = isSubscribed ? "gpt-4o" : "gpt-4o-mini";
-        const maxTokens = isSubscribed ? 800 : 400; // Give premium users a more detailed response
+        // ✅ Increased token limit to prevent the AI response from being cut off.
+        const maxTokens = isSubscribed ? 1536 : 1024;
 
         const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
             method: 'POST',
@@ -117,7 +116,17 @@ module.exports = async (request, response) => {
         }
 
         const data = await openAIResponse.json();
-        const analysisContent = JSON.parse(data.choices[0].message.content);
+        const contentString = data.choices[0].message.content;
+        let analysisContent;
+
+        // ✅ Add more robust error handling for JSON parsing
+        try {
+            analysisContent = JSON.parse(contentString);
+        } catch (parseError) {
+            console.error("🔴 FAILED TO PARSE JSON FROM OPENAI. The response was likely truncated by the max_tokens limit.");
+            console.error("Problematic content:", contentString); // This log is crucial for debugging
+            throw new Error('Failed to parse JSON response from OpenAI.');
+        }
 
         const tokensUsed = data.usage.total_tokens;
         const callCost = (tokensUsed / 1000) * COST_PER_1K_TOKENS_GBP;
