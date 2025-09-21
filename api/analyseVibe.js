@@ -1,8 +1,8 @@
 import { Redis } from '@upstash/redis'
 import crypto from "crypto";
 
-// --- CONFIGURATION ---
-const PROMPT_VERSION = "2.1-legendary-stream"; // New version for streaming
+// --- CONFIGURATION & VERSIONING ---
+const PROMPT_VERSION = "2.3-legendary-robust";
 const DAILY_BUDGET_GBP = 50.00;
 const COST_PER_1K_TOKENS_GBP = 0.0006;
 
@@ -11,9 +11,8 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-// --- DYNAMIC PROMPT (Unchanged) ---
+// --- DYNAMIC PROMPT (The "Secret Sauce") ---
 const generatePrompt = (conversation, goal, persona) => {
-    // ... (The legendary prompt logic remains the same) ...
     let personaInstruction = "";
     switch (persona) {
         case "Direct 🤔":
@@ -32,6 +31,7 @@ const generatePrompt = (conversation, goal, persona) => {
             personaInstruction = "Your tone is that of a helpful, neutral dating coach.";
     }
 
+    // ✅ This is the restored, complete prompt.
     return `
 You are "VibeCheck," a world-class communication strategist and dating coach. Your analysis is legendary, providing users with an almost unfair advantage. You must use British English spelling and colloquialisms.
 
@@ -53,21 +53,18 @@ You are "VibeCheck," a world-class communication strategist and dating coach. Yo
     * **'consequence':** (Only for The Rebel persona) A warning of the potential negative outcome.
 
 **CRITICAL Output Format:**
-You must respond ONLY with a single, minified JSON object. Do not include any introductory text, markdown, or explanations. Do not truncate your response. The JSON structure must exactly match this example:
-{"strategicAnalysis":"","powerDynamic":"","confidenceScore":0,"interestScore":0,"suggestedReplies":[{"title":"","text":"","mindset":"","reason":"","riskLevel":"","potentialOutcome":""}]}
+You must respond ONLY with a single, minified JSON object. Do not include any introductory text, markdown, or explanations. Your entire response should be a single JSON string, starting with '{' and ending with '}'.
 
-**Conversation to Analyze (Pay close attention to 'Me:' and 'T'hem:' labels):**
+**Conversation to Analyze (Pay close attention to 'Me:' and 'Them:' labels):**
 "${conversation}"
 `;
 };
 
-
-// --- MAIN HANDLER FUNCTION (Now configured for streaming) ---
+// --- MAIN HANDLER FUNCTION (Robust Non-Streaming Edition) ---
 module.exports = async (request, response) => {
     if (request.method !== 'POST') {
         return response.status(405).json({ error: 'Method Not Allowed' });
     }
-    // ... (Input validation remains the same) ...
     const { conversationText, goal, persona, isSubscribed } = request.body;
     if (!conversationText) {
         return response.status(400).json({ error: 'No conversation text provided.' });
@@ -76,11 +73,9 @@ module.exports = async (request, response) => {
         return response.status(413).json({ error: "Input is too long." });
     }
 
+    const cacheKey = `vibe-cache:${PROMPT_VERSION}:${crypto.createHash('md5').update(conversationText + goal + persona).digest('hex')}`;
 
     try {
-        // Caching and Budget check remain the same
-        // ...
-        const cacheKey = `vibe-cache:${PROMPT_VERSION}:${crypto.createHash('md5').update(conversationText + goal + persona).digest('hex')}`;
         const cachedResult = await redis.get(cacheKey);
         if (cachedResult) {
             console.log("CACHE HIT");
@@ -96,15 +91,9 @@ module.exports = async (request, response) => {
             return response.status(429).json({ error: "High demand. Please try again later or upgrade." });
         }
 
-
         const openAIPrompt = generatePrompt(conversationText, goal, persona);
         const modelToUse = isSubscribed ? "gpt-4o" : "gpt-4o-mini";
         const maxTokens = isSubscribed ? 1536 : 1024;
-
-        // ✅ Set up for a streaming response
-        response.setHeader('Content-Type', 'text/event-stream');
-        response.setHeader('Cache-Control', 'no-cache');
-        response.setHeader('Connection', 'keep-alive');
 
         const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
             method: 'POST',
@@ -115,20 +104,34 @@ module.exports = async (request, response) => {
             body: JSON.stringify({
                 model: modelToUse,
                 messages: [{ role: "system", content: openAIPrompt }],
-                stream: true, // This is the key change for OpenAI
+                response_format: { type: "json_object" },
+                max_tokens: maxTokens,
             }),
         });
         
-        // Pipe the streaming response directly to the client
-        for await (const chunk of openAIResponse.body) {
-            response.write(chunk);
+        if (!openAIResponse.ok) {
+            console.error("OpenAI API Error:", await openAIResponse.text());
+            throw new Error('OpenAI API returned an error.');
         }
-        response.end();
+
+        const data = await openAIResponse.json();
+        const analysisContent = JSON.parse(data.choices[0].message.content);
+
+        const tokensUsed = data.usage.total_tokens;
+        const callCost = (tokensUsed / 1000) * COST_PER_1K_TOKENS_GBP;
+        const currentTotal = await redis.incrbyfloat(budgetKey, callCost);
+        
+        if (currentTotal === callCost) {
+            await redis.expire(budgetKey, 86400);
+        }
+        
+        await redis.set(cacheKey, analysisContent, { ex: 86400 });
+
+        return response.status(200).json(analysisContent);
 
     } catch (error) {
         console.error("Backend Error:", error);
-        // Can't send a JSON error if the headers are already set for streaming
-        response.end();
+        return response.status(500).json({ error: "A server error occurred. Please try again." });
     }
 };
 
