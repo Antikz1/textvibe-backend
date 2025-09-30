@@ -129,4 +129,3 @@ module.exports = async (request, response) => {
         return response.status(500).json({ error: "A server error occurred. Please try again." });
     }
 };
-
