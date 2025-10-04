@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/analyzeVibe.js": {
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/analyzeVibe",
+      "destination": "/api/analyzeVibe.js"
+    }
+  ]
+}
